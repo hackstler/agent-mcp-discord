@@ -18,14 +18,14 @@ async function runConversation(): Promise<void> {
   console.log('Available tools:', tools);
 
   const initialState: InitialState = {
-    guildId: '693622824946106649',
+    guildId: '1365186940864958567',
     roles: [
       { name: 'Student' },
       { name: 'Instructor' },
       { name: 'Admin' }
     ],
-    channels: ['ofertas-trabajo', 'clases', 'proyectos', 'random'],
-    channelId: '693622824946106652',
+    channels: ['ofertas-trabajo', 'coding-challenges', 'build-together', 'libros', 'cervezas, software y lágrimas', 'Bienvenida'],
+    channelId: '1365186940864958570',
     repoOwner: 'hackstler',
     repoName: 'agent-mcp-discord',
     issueTitle: 'Resumen de Discord'

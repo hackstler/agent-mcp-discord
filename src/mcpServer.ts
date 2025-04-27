@@ -5,10 +5,11 @@ import { agentGraph } from './agentGraph';
 import { initGitHub } from './githubClient';
 import { initGemini } from './geminiClient';
 import { loginDiscord } from './discordClient';
-
+import { setupDiscordEvents } from './discordEvents';
 
 async function main() {
     await loginDiscord();
+    setupDiscordEvents();
     initGemini();
     initGitHub();
   }
