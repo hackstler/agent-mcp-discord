@@ -1,4 +1,4 @@
 dist/
 node_modules/
 .env
-storage/
+src/storage/memory.json  

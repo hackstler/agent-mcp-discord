@@ -1,37 +1,36 @@
-
-import { langgraphAgent } from '../agents/langgraphAgent';
-import { agentExecutor } from '../tools/mcpTools';
+import { langgraphAgent } from '../agents/chatAgent';
+import { agentExecutor } from '../tools/dispatcher';
 
 async function main() {
-  console.log('🤖 Bienvenido a AfterCoding CLI Agent!');
+  console.log('🤖 Welcome to AfterCoding CLI Agent!');
 
   while (true) {
     const userInput = await promptUser("> ");
 
     if (userInput.toLowerCase() === 'exit') {
-      console.log('👋 ¡Hasta pronto!');
+      console.log('👋 Goodbye!');
       process.exit(0);
     }
 
     const result = await langgraphAgent.invoke({ userInput });
 
     if (!result || !result.finalResponse) {
-      console.error('❌ Error: No se pudo procesar la instrucción.');
+      console.error('❌ Error: Could not process the instruction.');
       continue;
     }
 
     const { tool, parameters } = result.finalResponse;
 
     if (tool === 'talk') {
-      console.log(`🗣️ [Charla]: ${parameters.text}`);
+      console.log(`🗣️ [Chat]: ${parameters.text}`);
       continue;
     }
 
     try {
       const execResult = await agentExecutor(result.finalResponse);
-      console.log(`⚙️ Resultado ejecución: ${JSON.stringify(execResult)}`);
+      console.log(`⚙️ Execution result: ${JSON.stringify(execResult)}`);
     } catch (err) {
-      console.error(`❌ Error ejecutando herramienta MCP: ${(err as Error).message}`);
+      console.error(`❌ Error executing MCP tool: ${(err as Error).message}`);
     }
   }
 }

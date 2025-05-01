@@ -1,6 +1,7 @@
 import fetch from 'node-fetch';
 import { Response } from 'node-fetch';
-/** Initial state required to invoke the agent */
+import 'dotenv/config';
+
 interface InitialState {
   guildId: string;
   roles: Array<{ name: string; permissions?: bigint }>;
@@ -11,9 +12,8 @@ interface InitialState {
   issueTitle: string;
 }
 
-/** Client example that consumes the MCP Server */
 async function runConversation(): Promise<void> {
-  const toolsRes: Response  = await fetch('http://localhost:4000/tools');
+  const toolsRes: Response  = await fetch(`${process.env.HOST}/tools/list`); // ✅ Cambiado
   const tools = await toolsRes.json();
   console.log('Available tools:', tools);
 
@@ -30,12 +30,13 @@ async function runConversation(): Promise<void> {
     repoName: 'agent-mcp-discord',
     issueTitle: 'Resumen de Discord'
   };
-  
-  const runRes = await fetch('http://localhost:4000/run', {
+
+  const runRes = await fetch(`${process.env.HOST}/workflow/run`, { // ✅ Cambiado
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(initialState)
+    body: JSON.stringify({ tool: 'runWorkflow', parameters: initialState }) // ✅ Añadido el wrapper
   });
+
   const result = await runRes.json();
   console.log('Final agent result:', result);
 }
