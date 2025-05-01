@@ -1,4 +1,3 @@
-// src/agents/langgraphAgent.ts
 
 import { StateGraph, START, END, Annotation } from '@langchain/langgraph';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
@@ -102,7 +101,22 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
 
       try {
         const parsed = JSON.parse(raw);
-        if (!parsed.tool || !parsed.parameters) throw new Error();
+
+        // ✅ Manejar respuestas que no contienen "tool" pero sí información útil
+        if (!parsed.tool || !parsed.parameters) {
+          if (Array.isArray(parsed.tools)) {
+            return {
+              finalResponse: {
+                tool: 'talk',
+                parameters: {
+                  text: `Puedo usar estas herramientas: ${parsed.tools.join(', ')}`
+                }
+              }
+            };
+          }
+
+          throw new Error('Respuesta sin tool válida.');
+        }
 
         const { tool, parameters } = parsed;
         console.log('🧠 Intención detectada:', tool);
