@@ -1,4 +1,3 @@
-
 import { StateGraph, START, END, Annotation } from '@langchain/langgraph';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { RunnableLambda } from '@langchain/core/runnables';
@@ -53,7 +52,7 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
 
       if (expectingGuildId && pendingAction) {
         const guildId = userInput.trim();
-        if (!/^\d+$/.test(guildId)) {
+        if (!/^[0-9]+$/.test(guildId)) {
           return {
             finalResponse: {
               tool: 'talk',
@@ -102,7 +101,6 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
       try {
         const parsed = JSON.parse(raw);
 
-        // ✅ Manejar respuestas que no contienen "tool" pero sí información útil
         if (!parsed.tool || !parsed.parameters) {
           if (Array.isArray(parsed.tools)) {
             return {
@@ -114,7 +112,6 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
               }
             };
           }
-
           throw new Error('Respuesta sin tool válida.');
         }
 
@@ -167,6 +164,16 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
               expectingGuildId: false
             };
           }
+        }
+
+        if (tool === 'createIssue' && (!parameters.repoOwner || !parameters.repoName || !parameters.issueTitle || !parameters.summary)) {
+          return {
+            finalResponse: {
+              tool: 'talk',
+              parameters: { text: 'Falta información: necesito repoOwner, repoName, issueTitle y summary para crear el issue.' }
+            },
+            pendingAction: parsed
+          };
         }
 
         await addMessageToMemory('user', `Usuario: ${userInput}`);

@@ -1,4 +1,3 @@
-
 import { StateGraph, Annotation, START, END } from '@langchain/langgraph';
 import { client } from './discordClient';
 import { model } from './geminiClient';
@@ -61,9 +60,9 @@ export const agentGraph = new StateGraph(StateAnnotation)
 
     try {
       const rawChannel = await client.channels.fetch(state.channelId);
-      if (!rawChannel) throw new Error('El canal no existe o no es accesible');
+      if (!rawChannel) throw new Error('Channel does not exist or is not accessible');
 
-      if (rawChannel.type !== 0) throw new Error('El canal no es de texto');
+      if (rawChannel.type !== 0) throw new Error('Channel is not a text channel');
 
       const channel = rawChannel as TextChannel;
 
