@@ -1,3 +1,4 @@
+// src/agents/langgraphAgent.ts
 
 import { StateGraph, START, END, Annotation } from '@langchain/langgraph';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
@@ -39,15 +40,15 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
 
   .addNode('input', new RunnableLambda({
     func: async (state: AgentState) => {
-      console.log(`👤 User: ${state.userInput}`);
+      console.log(`👤 Usuario: ${state.userInput}`);
       return { userInput: state.userInput };
     }
   }))
 
   .addNode('processInput', new RunnableLambda({
     func: async (state: AgentState) => {
-      console.log('\n🔄 Entering processInput...');
-      console.log('🧠 Received state:', JSON.stringify(state, null, 2));
+      console.log('\n🔄 Entrando en processInput...');
+      console.log('🧠 Estado recibido:', JSON.stringify(state, null, 2));
 
       const { userInput, pendingAction, expectingGuildId, rememberedGuildId } = state;
 
@@ -101,11 +102,10 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
 
       try {
         const parsed = JSON.parse(raw);
-
         if (!parsed.tool || !parsed.parameters) throw new Error();
 
         const { tool, parameters } = parsed;
-        console.log('🧠 Detected intent:', tool);
+        console.log('🧠 Intención detectada:', tool);
 
         if (!allowedTools.includes(tool)) {
           return {
@@ -116,20 +116,43 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
           };
         }
 
-        if (["createChannels", "createRoles"].includes(tool) && (!parameters.guildId || parameters.guildId === 'guildId')) {
-          if (rememberedGuildId) {
-            parameters.guildId = rememberedGuildId;
-            return { finalResponse: parsed };
+        if (["createChannels", "createRoles"].includes(tool)) {
+          if (!parameters.guildId || parameters.guildId === 'guildId') {
+            if (rememberedGuildId) {
+              parsed.parameters.guildId = rememberedGuildId;
+              return { finalResponse: parsed };
+            }
+            return {
+              finalResponse: {
+                tool: 'talk',
+                parameters: { text: '¿Cuál es el ID del servidor de Discord donde quieres hacerlo?' }
+              },
+              pendingAction: parsed,
+              expectingGuildId: true
+            };
           }
 
-          return {
-            finalResponse: {
-              tool: 'talk',
-              parameters: { text: '¿Cuál es el ID del servidor de Discord donde quieres hacerlo?' }
-            },
-            pendingAction: parsed,
-            expectingGuildId: true
-          };
+          if (tool === 'createChannels' && (!parameters.channels || parameters.channels.length === 0)) {
+            return {
+              finalResponse: {
+                tool: 'talk',
+                parameters: { text: '¿Cómo se debe llamar el canal que quieres crear?' }
+              },
+              pendingAction: parsed,
+              expectingGuildId: false
+            };
+          }
+
+          if (tool === 'createRoles' && (!parameters.roles || parameters.roles.length === 0)) {
+            return {
+              finalResponse: {
+                tool: 'talk',
+                parameters: { text: '¿Qué roles quieres crear en ese servidor?' }
+              },
+              pendingAction: parsed,
+              expectingGuildId: false
+            };
+          }
         }
 
         await addMessageToMemory('user', `Usuario: ${userInput}`);
@@ -137,7 +160,7 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
 
         return { finalResponse: parsed };
       } catch (err) {
-        console.warn('⚠️ Failed to parse model output');
+        console.warn('⚠️ Fallo al parsear salida de modelo');
         return {
           finalResponse: {
             tool: 'talk',
@@ -150,7 +173,7 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
 
   .addNode('talk', new RunnableLambda({
     func: async (state: AgentState) => {
-      console.log(`🗣️ [Talk]: ${state.finalResponse?.parameters.text}`);
+      console.log(`🗣️ [Charla]: ${state.finalResponse?.parameters.text}`);
       return state;
     }
   }))
@@ -170,7 +193,7 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
         result = await agentExecutor(finalResponse);
       }
 
-      console.log(`⚙️ Execution result: ${JSON.stringify(result)}`);
+      console.log(`⚙️ Resultado ejecución: ${JSON.stringify(result)}`);
 
       return {
         ...state,

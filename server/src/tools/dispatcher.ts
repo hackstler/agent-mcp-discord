@@ -10,7 +10,8 @@ export async function runAgentGraphWorkflow(parameters: any) {
 }
 
 export async function runWorkflow(tool: string, parameters: any) {
-  const response = await axios.post(`${process.env.HOST}/tool`, {
+  console.log("🚀 ~ runWorkflow ~ process.env.HOST:", process.env.HOST)
+  const response = await axios.post(`${process.env.HOST}/tool/execute`, {
     tool,
     parameters
   });

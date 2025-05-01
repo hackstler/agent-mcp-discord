@@ -13,7 +13,7 @@ interface InitialState {
 }
 
 async function runConversation(): Promise<void> {
-  const toolsRes: Response  = await fetch(`${process.env.HOST}/tools/list`); // ✅ Cambiado
+  const toolsRes: Response  = await fetch(`${process.env.HOST}/tools/list`); 
   const tools = await toolsRes.json();
   console.log('Available tools:', tools);
 
@@ -31,10 +31,10 @@ async function runConversation(): Promise<void> {
     issueTitle: 'Resumen de Discord'
   };
 
-  const runRes = await fetch(`${process.env.HOST}/workflow/run`, { // ✅ Cambiado
+  const runRes = await fetch(`${process.env.HOST}/workflow/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tool: 'runWorkflow', parameters: initialState }) // ✅ Añadido el wrapper
+    body: JSON.stringify({ tool: 'runWorkflow', parameters: initialState })
   });
 
   const result = await runRes.json();
