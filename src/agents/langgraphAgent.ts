@@ -134,17 +134,16 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
       }
 
       try {
-        // Limpieza previa antes de parsear
-if (raw.includes('Asistente:')) {
-  raw = raw.split('Asistente:').pop()!.trim();
-}
+        if (raw.includes('Asistente:')) {
+          raw = raw.split('Asistente:').pop()!.trim();
+        }
 
-if (raw.startsWith('```') && raw.endsWith('```')) {
-  raw = raw.slice(3, -3).trim();
-  if (raw.startsWith('json')) {
-    raw = raw.slice(4).trim();
-  }
-}
+        if (raw.startsWith('```') && raw.endsWith('```')) {
+          raw = raw.slice(3, -3).trim();
+          if (raw.startsWith('json')) {
+            raw = raw.slice(4).trim();
+          }
+        }
 
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === 'object' && 'tool' in parsed && 'parameters' in parsed) {
@@ -223,7 +222,6 @@ if (raw.startsWith('```') && raw.endsWith('```')) {
       const result = await agentExecutor(state.finalResponse);
       console.log(`⚙️ Resultado ejecución: ${JSON.stringify(result)}`);
   
-      // ✅ Generar respuesta hablada para el usuario
       const talkResponse = {
         tool: 'talk',
         parameters: {
