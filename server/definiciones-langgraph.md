@@ -100,8 +100,6 @@ Solo cuando quieres hacer funciones más personalizadas, trazables o configurabl
 
 ---
 
-# 🔥 VAMOS A DEFINIR TODO CLARAMENTE PARA ENTREVISTA
-
 | Concepto | Definición corta | Ejemplo real |
 |:---------|:-----------------|:-------------|
 | **Grafo** | Estructura de nodos conectados por aristas | Flujos de herramientas (crear canal, leer mensajes, etc.) |

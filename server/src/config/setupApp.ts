@@ -10,11 +10,10 @@ export async function startApp() {
   app.use(express.json());
   configureCors(app);
 
-  // Rutas de agente conversacional
+
   app.use('/agent', agentRouter);
 
-// Rutas de herramientas
-app.get('/tools/list', (_req: Request, res: Response) => {
+  app.get('/tools/list', (_req: Request, res: Response) => {
     const tools = Object.keys(agentGraph.nodes);
     res.json({ tools });
   });
@@ -47,7 +46,7 @@ app.get('/tools/list', (_req: Request, res: Response) => {
       res.status(500).json({ success: false, error: error.message });
     }
   });
-  
+
   
   const PORT = Number(process.env.PORT) || 4000;
   app.listen(PORT, () => {
