@@ -81,8 +81,11 @@ export const agentGraph = new StateGraph(StateAnnotation)
   })
 
   .addNode('summarize', async (state) => {
-    const result = await model.generateContent(state.messages.join('\n'));
-    return { summary: result.response.text() };
+    const result = await model.invoke([
+      { role: 'system', content: 'Eres un asistente que resume conversaciones.' },
+      { role: 'user', content: state.messages.join('\n') }
+    ]);
+    return { summary: result.content };
   })
 
   .addNode('createIssue', async (state) => {

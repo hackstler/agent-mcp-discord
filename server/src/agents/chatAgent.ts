@@ -127,7 +127,8 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
           };
         }
 
-        if (["createChannels", "createRoles"].includes(tool)) {
+        if (['createChannels', 'createRoles'].includes(tool)) {
+          // solicitar guildId si falta
           if (!parameters.guildId || parameters.guildId === 'guildId') {
             if (rememberedGuildId) {
               parsed.parameters.guildId = rememberedGuildId;
@@ -143,15 +144,20 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
             };
           }
 
-          if (tool === 'createChannels' && (!parameters.channels || parameters.channels.length === 0)) {
-            return {
-              finalResponse: {
-                tool: 'talk',
-                parameters: { text: '¿Cómo se debe llamar el canal que quieres crear?' }
-              },
-              pendingAction: parsed,
-              expectingGuildId: false
-            };
+          // detectar placeholder o falta de nombre de canal
+          if (tool === 'createChannels') {
+            const ch = parameters.channels;
+            const isPlaceholder = Array.isArray(ch) && ch.length === 1 && ch[0] === 'nuevo-canal';
+            if (!ch || ch.length === 0 || isPlaceholder) {
+              return {
+                finalResponse: {
+                  tool: 'talk',
+                  parameters: { text: '¿Cómo quieres que se llame el canal?' }
+                },
+                pendingAction: parsed,
+                expectingGuildId: false
+              };
+            }
           }
 
           if (tool === 'createRoles' && (!parameters.roles || parameters.roles.length === 0)) {

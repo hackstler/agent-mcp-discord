@@ -7,11 +7,10 @@ import { setupDiscordEvents } from '../discordEvents';
 
 export async function initServices() {
   console.log('🧠 Inicializando memoria...');
+  initGemini();
   await initMemory();
-
   console.log('🤖 Iniciando clientes externos...');
   await loginDiscord();
   setupDiscordEvents();
-  initGemini();
   initGitHub();
 }

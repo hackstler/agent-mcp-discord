@@ -1,13 +1,15 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-let model: ReturnType<GoogleGenerativeAI['getGenerativeModel']>;
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+let model: ChatGoogleGenerativeAI;
 
 export function initGemini() {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error('NO GEMINI_API_KEY en .env');
-  const genAI = new GoogleGenerativeAI(key);
-  model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash-preview-04-17'
+  model = new ChatGoogleGenerativeAI({
+    model: 'gemini-1.5-flash',
+    apiKey: process.env.GEMINI_API_KEY,
+    temperature: 0.3
   });
+
 }
 
 export { model };
