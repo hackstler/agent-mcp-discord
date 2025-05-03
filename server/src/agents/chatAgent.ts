@@ -6,9 +6,9 @@ import { AgentState } from './agentState';
 import { getRelevantHistory, addMessageToMemory } from './memory';
 import { systemPrompt } from '../prompts/systemPrompts';
 import 'dotenv/config';
+import { model } from '../geminiClient';
 
 const allowedTools = [
-  'createGuild',
   'createRoles',
   'createChannels',
   'fetchMessages',
@@ -18,11 +18,6 @@ const allowedTools = [
   'talk'
 ];
 
-const model = new ChatGoogleGenerativeAI({
-  model: 'gemini-1.5-flash',
-  apiKey: process.env.GEMINI_API_KEY,
-  temperature: 0.3
-});
 
 const AgentAnnotation = Annotation.Root({
   userInput: Annotation<string>(),
@@ -38,22 +33,25 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
 
   .addNode('input', new RunnableLambda({
     func: async (state: AgentState) => {
-      console.log(`👤 Usuario: ${state.userInput}`);
+      console.log(`👤 User: ${state.userInput}`);
       return { userInput: state.userInput };
     }
   }))
 
   .addNode('processInput', new RunnableLambda({
     func: async (state: AgentState) => {
-      console.log('\n🔄 Entrando en processInput...');
-      console.log('🧠 Estado recibido:', JSON.stringify(state, null, 2));
-
+      console.log('\n🔄 Entering processInput...');
+      console.log('🧠 Received state:', JSON.stringify(state, null, 2));
+  
       const { userInput, pendingAction, expectingGuildId, rememberedGuildId } = state;
-
+      await addMessageToMemory('user', `Usuario: ${userInput}`);
+  
       if (expectingGuildId && pendingAction) {
         const guildId = userInput.trim();
+  
         if (!/^[0-9]+$/.test(guildId)) {
           return {
+            ...state,
             finalResponse: {
               tool: 'talk',
               parameters: {
@@ -64,7 +62,7 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
             pendingAction
           };
         }
-
+  
         const updatedAction = {
           tool: pendingAction.tool,
           parameters: {
@@ -72,38 +70,47 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
             guildId
           }
         };
-
+  
         await addMessageToMemory('user', `Usuario: ${guildId}`);
+        await addMessageToMemory('assistant', `Asistente: ${JSON.stringify(updatedAction, null, 2)}`);
+  
         return {
+          ...state,
           finalResponse: updatedAction,
           rememberedGuildId: guildId,
           expectingGuildId: false,
           pendingAction: undefined
         };
       }
-
+  
       const history = await getRelevantHistory(userInput);
       const messages = [
         { role: 'system', content: systemPrompt },
         ...history,
+        ...(pendingAction ? [{
+          role: 'assistant',
+          content: `Asistente: ${JSON.stringify(pendingAction)}`
+        }] : []),
         { role: 'user', content: userInput }
       ];
-
+  
       const response = await model.invoke(messages);
       let raw = (response.content as string).trim();
       console.log('🧪 DEBUG: rawContent:', raw);
-
+      
       raw = raw.replace(/^```json|```$/g, '').replace(/^```/, '').trim();
       if (raw.includes('Asistente:')) {
         raw = raw.split('Asistente:').pop()?.trim() ?? raw;
       }
-
+      
       try {
         const parsed = JSON.parse(raw);
-
+        await addMessageToMemory('assistant', `Asistente: ${JSON.stringify(parsed)}`);
+  
         if (!parsed.tool || !parsed.parameters) {
           if (Array.isArray(parsed.tools)) {
             return {
+              ...state,
               finalResponse: {
                 tool: 'talk',
                 parameters: {
@@ -114,27 +121,32 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
           }
           throw new Error('Respuesta sin tool válida.');
         }
-
+  
         const { tool, parameters } = parsed;
-        console.log('🧠 Intención detectada:', tool);
-
+        console.log('🧠 Detected intent:', tool);
+  
         if (!allowedTools.includes(tool)) {
           return {
+            ...state,
             finalResponse: {
               tool: 'talk',
               parameters: { text: 'Esa herramienta no está disponible.' }
             }
           };
         }
-
+  
         if (['createChannels', 'createRoles'].includes(tool)) {
-          // solicitar guildId si falta
           if (!parameters.guildId || parameters.guildId === 'guildId') {
             if (rememberedGuildId) {
               parsed.parameters.guildId = rememberedGuildId;
-              return { finalResponse: parsed };
+              return {
+                ...state,
+                finalResponse: parsed
+              };
             }
+            
             return {
+              ...state,
               finalResponse: {
                 tool: 'talk',
                 parameters: { text: '¿Cuál es el ID del servidor de Discord donde quieres hacerlo?' }
@@ -143,13 +155,13 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
               expectingGuildId: true
             };
           }
-
-          // detectar placeholder o falta de nombre de canal
+  
           if (tool === 'createChannels') {
             const ch = parameters.channels;
             const isPlaceholder = Array.isArray(ch) && ch.length === 1 && ch[0] === 'nuevo-canal';
             if (!ch || ch.length === 0 || isPlaceholder) {
               return {
+                ...state,
                 finalResponse: {
                   tool: 'talk',
                   parameters: { text: '¿Cómo quieres que se llame el canal?' }
@@ -159,9 +171,10 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
               };
             }
           }
-
+  
           if (tool === 'createRoles' && (!parameters.roles || parameters.roles.length === 0)) {
             return {
+              ...state,
               finalResponse: {
                 tool: 'talk',
                 parameters: { text: '¿Qué roles quieres crear en ese servidor?' }
@@ -171,24 +184,33 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
             };
           }
         }
-
-        if (tool === 'createIssue' && (!parameters.repoOwner || !parameters.repoName || !parameters.issueTitle || !parameters.summary)) {
+  
+        if (tool === 'createIssue' &&
+            (!parameters.repoOwner || !parameters.repoName || !parameters.issueTitle || !parameters.summary)) {
           return {
+            ...state,
             finalResponse: {
               tool: 'talk',
-              parameters: { text: 'Falta información: necesito repoOwner, repoName, issueTitle y summary para crear el issue.' }
+              parameters: {
+                text: 'Falta información: necesito repoOwner, repoName, issueTitle y summary para crear el issue.'
+              }
             },
             pendingAction: parsed
           };
         }
-
+  
         await addMessageToMemory('user', `Usuario: ${userInput}`);
         await addMessageToMemory('assistant', `Asistente: ${raw}`);
-
-        return { finalResponse: parsed };
-      } catch (err) {
-        console.warn('⚠️ Fallo al parsear salida de modelo');
+  
         return {
+          ...state,
+          finalResponse: parsed
+        };
+  
+      } catch (err) {
+        console.warn('⚠️ Failed to parse model output');
+        return {
+          ...state,
           finalResponse: {
             tool: 'talk',
             parameters: { text: "No entendí bien tu mensaje. ¿Puedes reformularlo?" }
@@ -197,10 +219,11 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
       }
     }
   }))
+  
 
   .addNode('talk', new RunnableLambda({
     func: async (state: AgentState) => {
-      console.log(`🗣️ [Charla]: ${state.finalResponse?.parameters.text}`);
+      console.log(`🗣️ [Talk]: ${state.finalResponse?.parameters.text}`);
       return state;
     }
   }))
@@ -220,7 +243,7 @@ export const langgraphAgent = new StateGraph(AgentAnnotation)
         result = await agentExecutor(finalResponse);
       }
 
-      console.log(`⚙️ Resultado ejecución: ${JSON.stringify(result)}`);
+      console.log(`⚙️ Execution result: ${JSON.stringify(result)}`);
 
       return {
         ...state,
